@@ -1,4 +1,6 @@
 import ExpoModulesCore
+import Foundation
+import StoreKit
 
 public class FlyStoreKitModule: Module {
     
@@ -45,7 +47,7 @@ public class FlyStoreKitModule: Module {
             }
         }
         
-        AsyncFunction("showManageSubscriptions") { (value: String) in
+        AsyncFunction("beginRefundRequest") { (productID: String) in
             if #available(iOS 15.0, *) {
                 Task {
                     do {
