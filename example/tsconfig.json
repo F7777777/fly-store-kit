@@ -1,0 +1,10 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "fly-store-kit": ["../src/index"],
+      "fly-store-kit/*": ["../src/*"]
+    }
+  }
+}
