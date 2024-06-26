@@ -1,44 +1,85 @@
 import ExpoModulesCore
 
 public class FlyStoreKitModule: Module {
-  // Each module class must implement the definition function. The definition consists of components
-  // that describes the module's functionality and behavior.
-  // See https://docs.expo.dev/modules/module-api for more details about available components.
-  public func definition() -> ModuleDefinition {
-    // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
-    // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
-    // The module will be accessible from `requireNativeModule('FlyStoreKit')` in JavaScript.
-    Name("FlyStoreKit")
-
-    // Sets constant properties on the module. Can take a dictionary or a closure that returns a dictionary.
-    Constants([
-      "PI": Double.pi
-    ])
-
-    // Defines event names that the module can send to JavaScript.
-    Events("onChange")
-
-    // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
-    Function("hello") {
-      return "Hello world! 👋"
+    
+    @available(iOS 15.0, *)
+    func getTransactions(for productIdentifier: String) async -> [Transaction] {
+        var transactions: [Transaction] = []
+        for await result in Transaction.all {
+            if case .verified(let transaction) = result, transaction.productID == productIdentifier {
+                transactions.append(transaction)
+            }
+        }
+        return transactions
     }
-
-    // Defines a JavaScript function that always returns a Promise and whose native code
-    // is by default dispatched on the different thread than the JavaScript runtime runs on.
-    AsyncFunction("setValueAsync") { (value: String) in
-      // Send an event to JavaScript.
-      self.sendEvent("onChange", [
-        "value": value
-      ])
+    
+    @available(iOS 15.0, *)
+    func sortTransactionsByDate(transactions: [Transaction]) -> [Transaction] {
+        return transactions.sorted { $0.purchaseDate < $1.purchaseDate }
     }
-
-    // Enables the module to be used as a native view. Definition components that are accepted as part of the
-    // view definition: Prop, Events.
-    View(FlyStoreKitView.self) {
-      // Defines a setter for the `name` prop.
-      Prop("name") { (view: FlyStoreKitView, prop: String) in
-        print(prop)
-      }
+    
+    
+    public func definition() -> ModuleDefinition {
+        
+        Name("FlyStoreKit")
+        
+        AsyncFunction("showManageSubscriptions") { () in
+            if #available(iOS 15.0, *) {
+                DispatchQueue.main.async {
+                    guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene else {
+                        //                        rejecter("no_window_scene", "No active window scene found", nil)
+                        return
+                    }
+                    
+                    Task {
+                        do {
+                            try await AppStore.showManageSubscriptions(in: windowScene)
+                            //                            resolver("Manage subscriptions screen presented successfully")
+                        } catch {
+                            //                            rejecter("show_manage_subscriptions_failed", "Failed to present manage subscriptions screen", error)
+                        }
+                    }
+                }
+            } else {
+                //                rejecter("unsupported_version", "iOS 15.0 or later is required", nil)
+            }
+        }
+        
+        AsyncFunction("showManageSubscriptions") { (value: String) in
+            if #available(iOS 15.0, *) {
+                Task {
+                    do {
+                        print(productID)
+                        let transactions = sortTransactionsByDate(transactions: await getTransactions(for: productID))
+                        
+                        // TODO Probably it should be not last transaction
+                        if let transaction = transactions.last {
+                            print(transaction)
+                            // TODO Probably it is wrong scene implementation
+                            guard let scene = await UIApplication.shared.connectedScenes.first as? UIWindowScene else {
+//                                rejecter("no_active_scene", "No active scene found", nil)
+                                return;
+                            }
+                            
+                            let status = try await transaction.beginRefundRequest(in: scene)
+                            
+//                            switch status {
+//                            case .success:
+//                                resolver("Refund request submitted successfully")
+//                            case .userCancelled:
+//                                rejecter("canceled", "User cancelled the refund request", nil)
+//                            @unknown default:
+//                                rejecter("unknown_status", "Unknown status ", nil)
+//                            }
+                        } else {
+//                            rejecter("no_transactions_found", "No transactions found for the product", nil)
+                        }
+                    } catch {
+//                        rejecter("error", error.localizedDescription, error)
+                    }
+                }
+            }
+        }
+        
     }
-  }
 }
