@@ -28,7 +28,9 @@
   "author": "antonsmiiukha <anton.smiyuha@dotcode.pro> ()",
   "license": "MIT",
   "homepage": "https://github.com/antonsmiiukha/fly-store-kit#readme",
-  "dependencies": {},
+  "dependencies": {
+    "react-native": "0.73.4"
+  },
   "devDependencies": {
     "@types/react": "^18.0.25",
     "expo-module-scripts": "^3.5.2",
